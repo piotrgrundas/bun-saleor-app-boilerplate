@@ -1,0 +1,10 @@
+node_modules/
+dist/
+artifact.zip
+.git/
+.github/
+coverage/
+.env
+.env.local
+.env.*.local
+*.md

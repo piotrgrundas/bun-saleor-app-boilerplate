@@ -1,0 +1,154 @@
+# Bun Saleor App Boilerplate
+
+A production-ready Saleor App boilerplate built with **Bun**, **Hono**, and **React 19**. Features clean architecture, multi-app support, type-safe error handling, and AWS-ready deployment.
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Runtime | [Bun](https://bun.sh) |
+| HTTP Framework | [Hono](https://hono.dev) |
+| Frontend | React 19, React Router 7, [@saleor/macaw-ui](https://github.com/saleor/macaw-ui) |
+| Validation | [Zod v4](https://zod.dev) |
+| Error Handling | [neverthrow](https://github.com/supermacro/neverthrow) (Result types) |
+| Auth | [jose](https://github.com/panva/jose) (JWT/JWK/JWS) |
+| GraphQL | [GraphQL Yoga](https://the-guild.dev/graphql/yoga-server), graphql-codegen |
+| DI | [iti](https://github.com/molszanski/iti) |
+| Secrets | AWS Secrets Manager |
+| Logging | [consola](https://github.com/unjs/consola), [Sentry](https://sentry.io) |
+| Linting/Formatting | [Biome](https://biomejs.dev) |
+| Testing | [Vitest](https://vitest.dev) |
+| Deployment | Docker, AWS Lambda |
+
+## Architecture
+
+```
+src/
+├── application/
+│   ├── domain/            # Saleor-agnostic interfaces, error codes, use-case contract
+│   ├── infrastructure/    # Implementations: Saleor client, JWKS/JWT, AWS, logging
+│   └── use-cases/         # Business logic (e.g. InstallAppUseCase)
+├── apps/
+│   ├── handler/           # Main app: Saleor webhooks, GraphQL API, React SPA
+│   └── dashboard/         # Configuration UI: REST API, React SPA
+├── di/                    # Dependency injection container + factories
+├── lib/                   # Generic, Saleor-free utilities
+│   ├── client/            # React mounting, Saleor Apps provider
+│   ├── config/            # Base config schemas + helpers
+│   ├── error/             # HttpError, DomainException, error handler
+│   ├── graphql/           # GraphQL fetch client, helpers
+│   ├── middleware/         # Hono middleware: logging, health, assets, validation
+│   ├── test/              # Test helpers: mock factories, test app/request builders
+│   ├── utils/             # Standalone utils: allowlist, money, invariant, type-guards
+│   └── zod/               # Zod utilities
+├── graphql/               # Generated Saleor schema types
+├── types/                 # Global type declarations
+└── serve.ts               # Local dev server entry point
+```
+
+### Key Principles
+
+- **`lib/` is Saleor-free** — anything Saleor-specific lives in `application/infrastructure/saleor/`
+- **Domain layer is framework-agnostic** — no Hono, no Saleor imports, only pure interfaces + `Result` types
+- **Multi-app architecture** — each app in `src/apps/*/` has its own `entry-server.ts` and `entry-client.tsx`, auto-discovered at build time
+- **DI container** — all dependencies wired in `src/di/container.ts`
+
+## Getting Started
+
+### Prerequisites
+
+- [Bun](https://bun.sh) >= 1.0
+- [Docker](https://www.docker.com/) (for LocalStack / AWS Secrets Manager locally)
+
+### Setup
+
+```bash
+# Install dependencies
+bun install
+
+# Copy environment config
+cp .env.example .env
+
+# Start LocalStack (AWS Secrets Manager)
+docker compose up -d localstack
+
+# Initialize secrets in LocalStack
+./etc/commands/init-aws.sh
+
+# Start the dev server (with hot reload)
+bun dev
+```
+
+The app will be available at `http://localhost:8000`:
+- `/` — Handler app (Saleor webhooks, GraphQL, SPA)
+- `/configuration` — Dashboard app (configuration UI)
+- `/health` — Health check endpoint
+
+### Docker Development
+
+```bash
+# Start everything (app + LocalStack)
+docker compose up
+
+# The app runs in a container with hot reload via volume mounts
+```
+
+## Commands
+
+| Command | Description |
+|---|---|
+| `bun dev` | Start dev server with hot reload |
+| `bun run build` | Build server + client for production |
+| `bun run build:client` | Build client bundles only |
+| `bun run preview` | Build and run in production mode |
+| `bun test` | Run tests |
+| `bun test --watch` | Run tests in watch mode |
+| `bun run lint` | Check linting + formatting (Biome) |
+| `bun run lint:fix` | Auto-fix linting + formatting |
+| `bun run format` | Format all files |
+| `bun run typecheck` | TypeScript type checking |
+| `bun run codegen` | Generate GraphQL types |
+| `bun run codegen:watch` | Generate GraphQL types (watch mode) |
+
+## Build & Deployment
+
+The build system uses `Bun.build()` directly (no Vite):
+
+1. **Server** — each `src/apps/*/entry-server.ts` is bundled to `dist/{appName}/entry-server.js`
+2. **Client** — each `src/apps/*/entry-client.tsx` is bundled to `dist/assets/{appName}/`
+3. **Public** — `public/` is copied to `dist/`
+
+### Docker Production Build
+
+The `Dockerfile` uses a multi-stage build:
+
+```bash
+docker build -t saleor-app .
+docker run -p 3000:3000 saleor-app
+```
+
+### AWS Lambda
+
+The handler app wraps Hono with a Lambda-compatible handler, so it can be deployed as a serverless function with no changes.
+
+## Environment Variables
+
+| Variable | Description | Default |
+|---|---|---|
+| `PORT` | Server port | `3000` |
+| `SALEOR_URL` | Saleor instance URL | — |
+| `LOG_LEVEL` | Logging level (debug, info, warn, error) | `debug` |
+| `AWS_ACCESS_KEY_ID` | AWS access key | — |
+| `AWS_SECRET_ACCESS_KEY` | AWS secret key | — |
+| `AWS_REGION` | AWS region | `us-east-1` |
+| `SECRET_MANAGER_APP_CONFIG_PATH` | Secrets Manager secret name | `saleor-app-config` |
+| `AWS_ENDPOINT_URL` | Custom AWS endpoint (LocalStack) | — |
+| `SALEOR_UI_APP_TOKEN` | Dashboard token for standalone dev | — |
+| `BASE_PATH` | URL prefix for the app | — |
+
+## CI/CD
+
+GitHub Actions workflows run on every PR:
+
+- **test.yml** — Installs dependencies and runs the test suite
+- **code_quality.yml** — Runs linting, type checking, and tests

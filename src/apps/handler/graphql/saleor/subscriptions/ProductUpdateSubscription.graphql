@@ -1,0 +1,12 @@
+subscription ProductUpdated {
+  event {
+    ... on ProductUpdated {
+      product {
+        id
+        name
+        slug
+        updatedAt
+      }
+    }
+  }
+}

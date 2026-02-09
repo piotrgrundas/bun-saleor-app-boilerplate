@@ -1,0 +1,1 @@
+export { postsQuery } from "./posts";
