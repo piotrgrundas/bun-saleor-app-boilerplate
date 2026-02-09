@@ -112,11 +112,39 @@ docker compose up
 
 ## Build & Deployment
 
-The build system uses `Bun.build()` directly (no Vite):
+The build system uses `Bun.build()` directly (no Vite). Each app is self-contained under `dist/{appName}/`:
 
-1. **Server** — each `src/apps/*/entry-server.ts` is bundled to `dist/{appName}/entry-server.js`
-2. **Client** — each `src/apps/*/entry-client.tsx` is bundled to `dist/assets/{appName}/`
-3. **Public** — `public/` is copied to `dist/`
+```
+dist/
+├── handler/
+│   ├── entry-server.js      # Server bundle
+│   ├── package.json          # ESM + external dependencies
+│   ├── node_modules/         # Installed external deps
+│   └── assets/               # Client bundle (JS, CSS, fonts)
+├── dashboard/
+│   └── ...                   # Same structure
+├── package.json              # Root ESM marker
+└── logo.png                  # Public assets
+```
+
+Build steps (`bun run build`):
+
+1. **Server** — each `src/apps/*/entry-server.ts` → `dist/{appName}/entry-server.js`
+2. **Client** — each `src/apps/*/entry-client.tsx` → `dist/{appName}/assets/`
+3. **External deps** — packages that can't be bundled are installed into `dist/{appName}/node_modules/`
+4. **Public** — `public/` is copied to `dist/`
+
+### Server Build Externals
+
+Some packages are excluded from the server bundle because they use native bindings, dynamic `require()`, or are already provided by the runtime. These are defined in `scripts/build-utils.ts` as `SERVER_EXTERNALS`:
+
+| Package | Reason | Action |
+|---|---|---|
+| `@aws-sdk/client-secrets-manager` | Provided by AWS Lambda runtime | Not bundled, not installed |
+| `@sentry/aws-serverless` | Native bindings | Auto-installed into `dist/{appName}/node_modules/` |
+| `@cacheable/node-cache` | Bundling issues | Auto-installed into `dist/{appName}/node_modules/` |
+
+To add a new external, add an entry to `SERVER_EXTERNALS` with `reason: "lambda-provided"` or `reason: "install"`. The build reads versions from the root `package.json`.
 
 ### Docker Production Build
 

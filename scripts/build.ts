@@ -1,49 +1,32 @@
 // Production build script.
 // 1. Cleans dist/
 // 2. Builds each server entry into dist/{appName}/
-// 3. Builds each client entry into dist/assets/{appName}/
-// 4. Copies public assets
-// 5. Generates package.json for ESM Lambda compatibility
+// 3. Builds each client entry into dist/{appName}/assets/
+// 4. Installs external dependencies into each app
+// 5. Copies public assets
+// 6. Generates package.json for ESM Lambda compatibility
 import fs from "node:fs";
 import path from "node:path";
 
-const DIST_DIR = path.resolve("dist");
-const APPS_DIR = path.resolve("src/apps");
+import {
+  type AppEntry,
+  DIST_DIR,
+  SERVER_EXTERNALS,
+  buildClient,
+  discoverEntryPoints,
+} from "./build-utils";
 
-// Clean
-if (fs.existsSync(DIST_DIR)) {
-  fs.rmSync(DIST_DIR, { recursive: true });
-}
-fs.mkdirSync(DIST_DIR, { recursive: true });
+const PUBLIC_DIR = path.resolve("public");
+const ROOT_PKG = JSON.parse(fs.readFileSync(path.resolve("package.json"), "utf-8"));
 
-// --- Server build ---
-interface AppEntry {
-  name: string;
-  entryPath: string;
-}
-
-function getServerEntryPoints(): AppEntry[] {
-  const entries: AppEntry[] = [];
-  if (!fs.existsSync(APPS_DIR)) return entries;
-
-  for (const dir of fs.readdirSync(APPS_DIR)) {
-    const entryPath = path.join(APPS_DIR, dir, "entry-server.ts");
-    if (fs.existsSync(entryPath)) {
-      entries.push({ name: dir, entryPath });
-    }
+function clean() {
+  if (fs.existsSync(DIST_DIR)) {
+    fs.rmSync(DIST_DIR, { recursive: true });
   }
-  return entries;
+  fs.mkdirSync(DIST_DIR, { recursive: true });
 }
 
-const serverApps = getServerEntryPoints();
-if (serverApps.length === 0) {
-  console.error("No server entry points found.");
-  process.exit(1);
-}
-
-console.log(`Building ${serverApps.length} server app(s)...`);
-
-for (const app of serverApps) {
+async function buildServer(app: AppEntry) {
   const outdir = path.join(DIST_DIR, app.name);
   fs.mkdirSync(outdir, { recursive: true });
 
@@ -54,46 +37,91 @@ for (const app of serverApps) {
     format: "esm",
     minify: true,
     naming: "[name].[ext]",
-    external: [
-      "@aws-sdk/client-secrets-manager",
-      "@sentry/aws-serverless",
-      "@cacheable/node-cache",
-    ],
+    external: SERVER_EXTERNALS.map((e) => e.name),
   });
 
   if (!result.success) {
     console.error(`Server build failed for app "${app.name}":`);
-    for (const log of result.logs) {
-      console.error(log);
-    }
+    for (const log of result.logs) console.error(log);
     process.exit(1);
   }
 
   console.log(`  ${app.name} → ${outdir}`);
 }
 
-// --- Client build ---
-console.log("Building client apps...");
-const clientProc = Bun.spawnSync(["bun", "run", "scripts/build-client.ts"], {
-  env: { ...process.env, NODE_ENV: "production" },
-  stdio: ["inherit", "inherit", "inherit"],
-});
+function installExternals(app: AppEntry) {
+  const appDir = path.join(DIST_DIR, app.name);
+  const depsToInstall = SERVER_EXTERNALS.filter((e) => e.reason === "install");
 
-if (clientProc.exitCode !== 0) {
-  console.error("Client build failed.");
-  process.exit(1);
+  if (depsToInstall.length === 0) return;
+
+  const dependencies: Record<string, string> = {};
+  for (const dep of depsToInstall) {
+    const version = ROOT_PKG.dependencies?.[dep.name];
+    if (!version) {
+      console.error(`External "${dep.name}" not found in root package.json dependencies.`);
+      process.exit(1);
+    }
+    dependencies[dep.name] = version;
+  }
+
+  fs.writeFileSync(
+    path.join(appDir, "package.json"),
+    JSON.stringify({ type: "module", dependencies }, null, 2),
+  );
+
+  const result = Bun.spawnSync(["bun", "install", "--production"], {
+    cwd: appDir,
+    stdio: ["inherit", "inherit", "inherit"],
+  });
+
+  if (result.exitCode !== 0) {
+    console.error(`Failed to install externals for app "${app.name}".`);
+    process.exit(1);
+  }
+
+  console.log(`  ${app.name} → ${depsToInstall.map((d) => d.name).join(", ")}`);
 }
 
-// --- Copy public assets ---
-const publicDir = path.resolve("public");
-if (fs.existsSync(publicDir)) {
-  for (const file of fs.readdirSync(publicDir)) {
-    fs.copyFileSync(path.join(publicDir, file), path.join(DIST_DIR, file));
+function copyPublicAssets() {
+  if (!fs.existsSync(PUBLIC_DIR)) return;
+
+  for (const file of fs.readdirSync(PUBLIC_DIR)) {
+    fs.copyFileSync(path.join(PUBLIC_DIR, file), path.join(DIST_DIR, file));
   }
   console.log("Public assets copied.");
 }
 
-// --- Generate package.json for Lambda ESM ---
-fs.writeFileSync(path.join(DIST_DIR, "package.json"), JSON.stringify({ type: "module" }, null, 2));
+function generateRootPackageJson() {
+  fs.writeFileSync(
+    path.join(DIST_DIR, "package.json"),
+    JSON.stringify({ type: "module" }, null, 2),
+  );
+}
+
+// --- Run ---
+
+clean();
+
+const serverApps = discoverEntryPoints("entry-server.ts");
+if (serverApps.length === 0) {
+  console.error("No server entry points found.");
+  process.exit(1);
+}
+
+console.log(`Building ${serverApps.length} server app(s)...`);
+for (const app of serverApps) await buildServer(app);
+
+const clientApps = discoverEntryPoints("entry-client.tsx");
+if (clientApps.length > 0) {
+  console.log(`Building ${clientApps.length} client app(s)...`);
+  for (const app of clientApps) await buildClient(app, { minify: true, nodeEnv: "production" });
+}
+
+console.log("Installing external dependencies...");
+for (const app of serverApps) installExternals(app);
+
+copyPublicAssets();
+generateRootPackageJson();
 
 console.log("Build complete → dist/");
