@@ -79,6 +79,7 @@ export class DomainException extends HttpError {
     return {
       ...super.serialize(),
       code: this.domainError.code,
+      ...(this.domainError.context ? { details: this.domainError.context } : {}),
     };
   }
 }
@@ -104,5 +105,11 @@ export class UnprocessableEntityException extends DomainException {
 export class ServiceUnavailableException extends DomainException {
   constructor(domainError: DomainError) {
     super(503, domainError);
+  }
+}
+
+export class ValidationException extends DomainException {
+  constructor(domainError: DomainError) {
+    super(400, domainError);
   }
 }

@@ -1,8 +1,5 @@
 type ErrorCodeFormat = `${string}_ERROR`;
 
-export const EXAMPLE_ERROR_CODES = [] as const satisfies ErrorCodeFormat[];
-export type ExampleErrorCode = (typeof EXAMPLE_ERROR_CODES)[number];
-
 export const JWKS_ERROR_CODES = [
   "JWKS_FETCH_ERROR",
   "JWKS_KEY_IMPORT_ERROR",
@@ -11,7 +8,9 @@ export const JWKS_ERROR_CODES = [
 ] as const satisfies ErrorCodeFormat[];
 export type JwksErrorCode = (typeof JWKS_ERROR_CODES)[number];
 
-export const JWT_ERROR_CODES = ["JWT_VERIFICATION_ERROR"] as const satisfies ErrorCodeFormat[];
+export const JWT_ERROR_CODES = [
+  "JWT_VERIFICATION_ERROR",
+] as const satisfies ErrorCodeFormat[];
 export type JwtErrorCode = (typeof JWT_ERROR_CODES)[number];
 
 export const SALEOR_CLIENT_ERROR_CODES = [
@@ -36,17 +35,23 @@ export const INSTALL_APP_ERROR_CODES = [
 ] as const satisfies ErrorCodeFormat[];
 export type InstallAppErrorCode = (typeof INSTALL_APP_ERROR_CODES)[number];
 
+export const VALIDATION_ERROR_CODES = [
+  "VALIDATION_ERROR",
+] as const satisfies ErrorCodeFormat[];
+export type ValidationErrorCode = (typeof VALIDATION_ERROR_CODES)[number];
+
 export const ErrorCodes = [
-  ...EXAMPLE_ERROR_CODES,
   ...JWKS_ERROR_CODES,
   ...JWT_ERROR_CODES,
   ...SALEOR_CLIENT_ERROR_CODES,
   ...APP_CONFIG_ERROR_CODES,
   ...INSTALL_APP_ERROR_CODES,
+  ...VALIDATION_ERROR_CODES,
 ] as const;
 export type ErrorCode = (typeof ErrorCodes)[number];
 
 export interface Error<T extends ErrorCode = ErrorCode> {
   code: T;
   message: string;
+  context?: Record<string, unknown>;
 }
