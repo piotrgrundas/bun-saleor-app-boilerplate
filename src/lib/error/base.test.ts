@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { Error as DomainError } from "@/application/domain/objects/error";
+import type { DomainError } from "@/application/domain/objects/error";
 import { DomainException, ValidationException } from "./base";
 
 describe("DomainException", () => {
@@ -9,7 +9,7 @@ describe("DomainException", () => {
     const domainError: DomainError<"VALIDATION_ERROR"> = {
       code: "VALIDATION_ERROR",
       message: "Validation failed",
-      context: { fieldErrors: { email: ["invalid format"] } },
+      context: { issues: [{ message: "invalid format", path: ["email"] }] },
     };
 
     // when
@@ -21,19 +21,19 @@ describe("DomainException", () => {
       message: "Validation failed",
       statusCode: 400,
       code: "VALIDATION_ERROR",
-      details: { fieldErrors: { email: ["invalid format"] } },
+      details: { issues: [{ message: "invalid format", path: ["email"] }] },
     });
   });
 
   it("omits details when context is undefined", () => {
     // given
-    const domainError: DomainError<"VALIDATION_ERROR"> = {
-      code: "VALIDATION_ERROR",
-      message: "Validation failed",
+    const domainError: DomainError<"JWKS_FETCH_ERROR"> = {
+      code: "JWKS_FETCH_ERROR",
+      message: "Failed to fetch JWKS",
     };
 
     // when
-    const serialized = new DomainException(400, domainError).serialize();
+    const serialized = new DomainException(502, domainError).serialize();
 
     // then
     expect(serialized.details).toBeUndefined();
@@ -46,7 +46,7 @@ describe("ValidationException", () => {
     const domainError: DomainError<"VALIDATION_ERROR"> = {
       code: "VALIDATION_ERROR",
       message: "Invalid input",
-      context: { formErrors: ["missing required fields"] },
+      context: { issues: [{ message: "missing required fields", path: [] }] },
     };
 
     // when
@@ -59,7 +59,7 @@ describe("ValidationException", () => {
       message: "Invalid input",
       statusCode: 400,
       code: "VALIDATION_ERROR",
-      details: { formErrors: ["missing required fields"] },
+      details: { issues: [{ message: "missing required fields", path: [] }] },
     });
   });
 });

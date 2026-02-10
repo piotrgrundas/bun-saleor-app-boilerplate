@@ -6,7 +6,7 @@ import type { JWKSRepository } from "@/application/domain/repositories/jwks-repo
 import type { JWKSService } from "@/application/domain/services/jwks-service";
 import type { JWTService } from "@/application/domain/services/jwt-service";
 import type { Logger } from "@/application/domain/services/logger";
-import type { SaleorClientFactory } from "@/application/domain/services/saleor-client-service";
+import type { SaleorClient } from "@/application/domain/services/saleor-client-service";
 
 export function createMockLogger(): Logger {
   return {
@@ -62,14 +62,10 @@ export function createMockJwtService(): JWTService {
   };
 }
 
-export function createMockSaleorClientFactory(appId = "test-app-id"): SaleorClientFactory {
+export function createMockSaleorClient(appId = "test-app-id"): SaleorClient {
   return {
-    create() {
-      return {
-        async getAppId() {
-          return ok(appId);
-        },
-      };
+    async getAppId() {
+      return ok(appId);
     },
   };
 }

@@ -1,13 +1,12 @@
-import type { Result } from "neverthrow";
-
 import type { AppConfig } from "../objects/app-config";
-import type { AppConfigErrorCode, Error as DomainError } from "../objects/error";
+import type { AppConfigErrorCode } from "../objects/error";
+import type { AsyncDomainResult } from "../objects/result";
 
 export interface AppConfigRepository {
-  get(saleorDomain: string): Promise<Result<AppConfig | null, DomainError<AppConfigErrorCode>>>;
+  get(saleorDomain: string): AsyncDomainResult<AppConfig | null, AppConfigErrorCode>;
   set(
     saleorDomain: string,
     config: AppConfig,
-  ): Promise<Result<void, DomainError<AppConfigErrorCode>>>;
-  delete(saleorDomain: string): Promise<Result<void, DomainError<AppConfigErrorCode>>>;
+  ): AsyncDomainResult<void, AppConfigErrorCode>;
+  delete(saleorDomain: string): AsyncDomainResult<void, AppConfigErrorCode>;
 }

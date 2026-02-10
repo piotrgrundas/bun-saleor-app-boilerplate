@@ -20,7 +20,7 @@ function createMockJwksService(verifyResult: "ok" | "err" = "ok"): JWKSService {
     async verify() {
       return verifyResult === "ok"
         ? ok("verified-payload")
-        : err({ code: "JWKS_VERIFICATION_FAILED" as const, message: "Invalid signature" });
+        : err({ code: "JWKS_VERIFICATION_ERROR" as const, message: "Invalid signature" });
     },
   };
 }

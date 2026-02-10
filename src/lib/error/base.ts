@@ -1,13 +1,13 @@
 import { HTTPException } from "hono/http-exception";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 
-import type { Error as DomainError, ErrorCode } from "@/application/domain/objects/error";
+import type { DomainError, DomainErrorCode } from "@/application/domain/objects/error";
 
 export interface SerializedError {
   error: string;
   message: string;
   statusCode: number;
-  code?: ErrorCode;
+  code?: DomainErrorCode;
   details?: unknown;
 }
 

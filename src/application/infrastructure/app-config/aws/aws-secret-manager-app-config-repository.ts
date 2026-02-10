@@ -3,12 +3,12 @@ import {
   PutSecretValueCommand,
   SecretsManagerClient,
 } from "@aws-sdk/client-secrets-manager";
-import type { Result } from "neverthrow";
 import { err, ok } from "neverthrow";
 
 import type { AppConfig } from "@/application/domain/objects/app-config";
 import { appConfigMapSchema } from "@/application/domain/objects/app-config";
-import type { AppConfigErrorCode, Error as DomainError } from "@/application/domain/objects/error";
+import type { AppConfigErrorCode } from "@/application/domain/objects/error";
+import type { AsyncDomainResult } from "@/application/domain/objects/result";
 import type { AppConfigRepository } from "@/application/domain/repositories/app-config-repository";
 import { getErrorMessage } from "@/lib/error/helpers";
 
@@ -30,9 +30,7 @@ export class AwsSecretManagerAppConfigRepository implements AppConfigRepository 
     this.__secretPath = options.secretPath;
   }
 
-  private async __getConfigMap(): Promise<
-    Result<Record<string, AppConfig>, DomainError<AppConfigErrorCode>>
-  > {
+  private async __getConfigMap(): AsyncDomainResult<Record<string, AppConfig>, AppConfigErrorCode> {
     try {
       const command = new GetSecretValueCommand({ SecretId: this.__secretPath });
       const response = await this.__client.send(command);
@@ -55,7 +53,7 @@ export class AwsSecretManagerAppConfigRepository implements AppConfigRepository 
 
   private async __saveConfigMap(
     configMap: Record<string, AppConfig>,
-  ): Promise<Result<void, DomainError<AppConfigErrorCode>>> {
+  ): AsyncDomainResult<void, AppConfigErrorCode> {
     try {
       const command = new PutSecretValueCommand({
         SecretId: this.__secretPath,
@@ -72,9 +70,7 @@ export class AwsSecretManagerAppConfigRepository implements AppConfigRepository 
     }
   }
 
-  async get(
-    saleorDomain: string,
-  ): Promise<Result<AppConfig | null, DomainError<AppConfigErrorCode>>> {
+  async get(saleorDomain: string): AsyncDomainResult<AppConfig | null, AppConfigErrorCode> {
     const configMapResult = await this.__getConfigMap();
     if (configMapResult.isErr()) return err(configMapResult.error);
 
@@ -84,7 +80,7 @@ export class AwsSecretManagerAppConfigRepository implements AppConfigRepository 
   async set(
     saleorDomain: string,
     config: AppConfig,
-  ): Promise<Result<void, DomainError<AppConfigErrorCode>>> {
+  ): AsyncDomainResult<void, AppConfigErrorCode> {
     const configMapResult = await this.__getConfigMap();
     if (configMapResult.isErr()) return err(configMapResult.error);
 
@@ -92,7 +88,7 @@ export class AwsSecretManagerAppConfigRepository implements AppConfigRepository 
     return this.__saveConfigMap(configMapResult.value);
   }
 
-  async delete(saleorDomain: string): Promise<Result<void, DomainError<AppConfigErrorCode>>> {
+  async delete(saleorDomain: string): AsyncDomainResult<void, AppConfigErrorCode> {
     const configMapResult = await this.__getConfigMap();
     if (configMapResult.isErr()) return err(configMapResult.error);
 

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, spyOn } from "bun:test";
 
-import { BaseSaleorClientFactory } from "./base-saleor-client";
+import { BaseSaleorClient } from "./base-saleor-client";
 
 const API_URL = "https://test.saleor.cloud/graphql/";
 const TOKEN = "test-token";
@@ -25,28 +25,14 @@ afterEach(() => {
   fetchSpy?.mockRestore();
 });
 
-describe("BaseSaleorClientFactory", () => {
-  it("creates a client", () => {
-    // given
-    const factory = new BaseSaleorClientFactory();
-
-    // when
-    const client = factory.create(API_URL, TOKEN);
-
-    // then
-    expect(client).toBeDefined();
-    expect(client.getAppId).toBeFunction();
-  });
-});
-
 describe("BaseSaleorClient.getAppId", () => {
   it("returns app id on success", async () => {
     // given
     mockFetch(jsonResponse({ data: { app: { id: "app-123" } } }));
-    const client = new BaseSaleorClientFactory().create(API_URL, TOKEN);
+    const client = new BaseSaleorClient();
 
     // when
-    const result = await client.getAppId();
+    const result = await client.getAppId(API_URL, TOKEN);
 
     // then
     expect(result.isOk()).toBe(true);
@@ -58,7 +44,7 @@ describe("BaseSaleorClient.getAppId", () => {
     mockFetch(jsonResponse({ data: { app: { id: "app-123" } } }));
 
     // when
-    await new BaseSaleorClientFactory().create(API_URL, TOKEN).getAppId();
+    await new BaseSaleorClient().getAppId(API_URL, TOKEN);
 
     // then
     expect(fetchSpy).toHaveBeenCalledTimes(1);
@@ -71,10 +57,10 @@ describe("BaseSaleorClient.getAppId", () => {
   it("returns SALEOR_CLIENT_REQUEST_ERROR on network error", async () => {
     // given
     mockFetchError(new Error("connection refused"));
-    const client = new BaseSaleorClientFactory().create(API_URL, TOKEN);
+    const client = new BaseSaleorClient();
 
     // when
-    const result = await client.getAppId();
+    const result = await client.getAppId(API_URL, TOKEN);
 
     // then
     expect(result.isErr()).toBe(true);
@@ -85,10 +71,10 @@ describe("BaseSaleorClient.getAppId", () => {
   it("returns SALEOR_CLIENT_REQUEST_ERROR on non-ok response", async () => {
     // given
     mockFetch(jsonResponse({}, 500));
-    const client = new BaseSaleorClientFactory().create(API_URL, TOKEN);
+    const client = new BaseSaleorClient();
 
     // when
-    const result = await client.getAppId();
+    const result = await client.getAppId(API_URL, TOKEN);
 
     // then
     expect(result.isErr()).toBe(true);
@@ -99,10 +85,10 @@ describe("BaseSaleorClient.getAppId", () => {
   it("returns SALEOR_CLIENT_GRAPHQL_ERROR on graphql errors", async () => {
     // given
     mockFetch(jsonResponse({ errors: [{ message: "Permission denied" }] }));
-    const client = new BaseSaleorClientFactory().create(API_URL, TOKEN);
+    const client = new BaseSaleorClient();
 
     // when
-    const result = await client.getAppId();
+    const result = await client.getAppId(API_URL, TOKEN);
 
     // then
     expect(result.isErr()).toBe(true);
@@ -113,10 +99,10 @@ describe("BaseSaleorClient.getAppId", () => {
   it("returns SALEOR_CLIENT_APP_NOT_FOUND_ERROR when app is null", async () => {
     // given
     mockFetch(jsonResponse({ data: { app: null } }));
-    const client = new BaseSaleorClientFactory().create(API_URL, TOKEN);
+    const client = new BaseSaleorClient();
 
     // when
-    const result = await client.getAppId();
+    const result = await client.getAppId(API_URL, TOKEN);
 
     // then
     expect(result.isErr()).toBe(true);
@@ -126,10 +112,10 @@ describe("BaseSaleorClient.getAppId", () => {
   it("returns SALEOR_CLIENT_APP_NOT_FOUND_ERROR when data is missing", async () => {
     // given
     mockFetch(jsonResponse({}));
-    const client = new BaseSaleorClientFactory().create(API_URL, TOKEN);
+    const client = new BaseSaleorClient();
 
     // when
-    const result = await client.getAppId();
+    const result = await client.getAppId(API_URL, TOKEN);
 
     // then
     expect(result.isErr()).toBe(true);

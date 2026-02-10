@@ -1,8 +1,8 @@
 import NodeCache from "@cacheable/node-cache";
-import type { Result } from "neverthrow";
 import { err, ok } from "neverthrow";
 
-import type { Error as DomainError, JwksErrorCode } from "@/application/domain/objects/error";
+import type { JwksErrorCode } from "@/application/domain/objects/error";
+import type { AsyncDomainResult } from "@/application/domain/objects/result";
 import type { JWKSRepository } from "@/application/domain/repositories/jwks-repository";
 import { getErrorMessage } from "@/lib/error/helpers";
 
@@ -19,9 +19,7 @@ export class JoseJWKSRepository implements JWKSRepository {
     this.__cache = new NodeCache<JsonWebKey[]>({ stdTTL: CACHE_TTL_SECONDS });
   }
 
-  private async __fetchJWKS(
-    saleorDomain: string,
-  ): Promise<Result<JsonWebKey[], DomainError<JwksErrorCode>>> {
+  private async __fetchJWKS(saleorDomain: string): AsyncDomainResult<JsonWebKey[], JwksErrorCode> {
     const jwksUrl = `https://${saleorDomain}/.well-known/jwks.json`;
 
     try {
@@ -46,7 +44,7 @@ export class JoseJWKSRepository implements JWKSRepository {
   async getKeys(
     saleorDomain: string,
     forceRefresh = false,
-  ): Promise<Result<JsonWebKey[], DomainError<JwksErrorCode>>> {
+  ): AsyncDomainResult<JsonWebKey[], JwksErrorCode> {
     const cacheKey = `jwks:${saleorDomain}`;
 
     if (!forceRefresh) {

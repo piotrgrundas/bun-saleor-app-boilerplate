@@ -1,6 +1,5 @@
-import type { Result } from "neverthrow";
-
-import type { Error as DomainError, JwtErrorCode } from "../objects/error";
+import type { JwtErrorCode } from "../objects/error";
+import type { AsyncDomainResult } from "../objects/result";
 
 export interface JWTPayload {
   iss?: string;
@@ -12,5 +11,5 @@ export interface JWTPayload {
 }
 
 export interface JWTService {
-  verify(token: string, jwksUrl: string): Promise<Result<JWTPayload, DomainError<JwtErrorCode>>>;
+  verify(token: string, jwksUrl: string): AsyncDomainResult<JWTPayload, JwtErrorCode>;
 }

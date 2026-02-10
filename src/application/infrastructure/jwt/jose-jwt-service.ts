@@ -1,16 +1,13 @@
 import { createRemoteJWKSet, jwtVerify } from "jose";
-import type { Result } from "neverthrow";
 import { err, ok } from "neverthrow";
 
-import type { Error as DomainError, JwtErrorCode } from "@/application/domain/objects/error";
+import type { JwtErrorCode } from "@/application/domain/objects/error";
+import type { AsyncDomainResult } from "@/application/domain/objects/result";
 import type { JWTPayload, JWTService } from "@/application/domain/services/jwt-service";
 import { getErrorMessage } from "@/lib/error/helpers";
 
 export class JoseJWTService implements JWTService {
-  async verify(
-    token: string,
-    jwksUrl: string,
-  ): Promise<Result<JWTPayload, DomainError<JwtErrorCode>>> {
+  async verify(token: string, jwksUrl: string): AsyncDomainResult<JWTPayload, JwtErrorCode> {
     try {
       const jwks = createRemoteJWKSet(new URL(jwksUrl));
       const { payload } = await jwtVerify(token, jwks);

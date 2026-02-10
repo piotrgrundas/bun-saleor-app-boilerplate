@@ -1,14 +1,14 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 import { err, ok } from "neverthrow";
 
 import type { AppConfigRepository } from "@/application/domain/repositories/app-config-repository";
 import type { JWKSRepository } from "@/application/domain/repositories/jwks-repository";
-import type { SaleorClientFactory } from "@/application/domain/services/saleor-client-service";
+import type { SaleorClient } from "@/application/domain/services/saleor-client-service";
 import {
   createMockAppConfigRepository,
   createMockJwksRepository,
   createMockLogger,
-  createMockSaleorClientFactory,
+  createMockSaleorClient,
 } from "@/lib/test/mock";
 import { InstallAppUseCase } from "./install-app-use-case";
 
@@ -24,7 +24,7 @@ describe("InstallAppUseCase", () => {
     // given
     const useCase = new InstallAppUseCase(
       createMockAppConfigRepository(),
-      createMockSaleorClientFactory("app-123"),
+      createMockSaleorClient("app-123"),
       createMockJwksRepository(),
       createMockLogger(),
     );
@@ -41,7 +41,7 @@ describe("InstallAppUseCase", () => {
     const configRepo = createMockAppConfigRepository();
     const useCase = new InstallAppUseCase(
       configRepo,
-      createMockSaleorClientFactory("app-123"),
+      createMockSaleorClient("app-123"),
       createMockJwksRepository(),
       createMockLogger(),
     );
@@ -64,7 +64,7 @@ describe("InstallAppUseCase", () => {
     // given
     const useCase = new InstallAppUseCase(
       createMockAppConfigRepository(),
-      createMockSaleorClientFactory("app-123"),
+      createMockSaleorClient("app-123"),
       createMockJwksRepository(),
       createMockLogger(),
     );
@@ -76,21 +76,20 @@ describe("InstallAppUseCase", () => {
     });
 
     // then
-    expect(result.isErr()).toBe(true);
-    expect(result._unsafeUnwrapErr().code).toBe("INSTALL_APP_DOMAIN_NOT_ALLOWED_ERROR");
+    const error = result._unsafeUnwrapErr();
+    expect(error.code).toBe("INSTALL_APP_DOMAIN_NOT_ALLOWED_ERROR");
+    expect(error.cause).toBeUndefined();
   });
 
   it("returns INSTALL_APP_FETCH_ID_ERROR when saleor client fails", async () => {
     // given
-    const failingFactory: SaleorClientFactory = {
-      create: () => ({
-        getAppId: async () =>
-          err({ code: "SALEOR_CLIENT_REQUEST_ERROR", message: "connection refused" }),
-      }),
+    const failingClient: SaleorClient = {
+      getAppId: async () =>
+        err({ code: "SALEOR_CLIENT_REQUEST_ERROR", message: "connection refused" }),
     };
     const useCase = new InstallAppUseCase(
       createMockAppConfigRepository(),
-      failingFactory,
+      failingClient,
       createMockJwksRepository(),
       createMockLogger(),
     );
@@ -99,8 +98,12 @@ describe("InstallAppUseCase", () => {
     const result = await useCase.execute(INPUT);
 
     // then
-    expect(result.isErr()).toBe(true);
-    expect(result._unsafeUnwrapErr().code).toBe("INSTALL_APP_FETCH_ID_ERROR");
+    const error = result._unsafeUnwrapErr();
+    expect(error.code).toBe("INSTALL_APP_FETCH_ID_ERROR");
+    expect(error.cause).toEqual({
+      code: "SALEOR_CLIENT_REQUEST_ERROR",
+      message: "connection refused",
+    });
   });
 
   it("returns INSTALL_APP_SAVE_CONFIG_ERROR when config save fails", async () => {
@@ -112,7 +115,7 @@ describe("InstallAppUseCase", () => {
     };
     const useCase = new InstallAppUseCase(
       failingRepo,
-      createMockSaleorClientFactory(),
+      createMockSaleorClient(),
       createMockJwksRepository(),
       createMockLogger(),
     );
@@ -121,8 +124,12 @@ describe("InstallAppUseCase", () => {
     const result = await useCase.execute(INPUT);
 
     // then
-    expect(result.isErr()).toBe(true);
-    expect(result._unsafeUnwrapErr().code).toBe("INSTALL_APP_SAVE_CONFIG_ERROR");
+    const error = result._unsafeUnwrapErr();
+    expect(error.code).toBe("INSTALL_APP_SAVE_CONFIG_ERROR");
+    expect(error.cause).toEqual({
+      code: "APP_CONFIG_WRITE_ERROR",
+      message: "write failed",
+    });
   });
 
   it("returns INSTALL_APP_JWKS_PREFETCH_ERROR when jwks prefetch fails", async () => {
@@ -132,7 +139,7 @@ describe("InstallAppUseCase", () => {
     };
     const useCase = new InstallAppUseCase(
       createMockAppConfigRepository(),
-      createMockSaleorClientFactory(),
+      createMockSaleorClient(),
       failingJwks,
       createMockLogger(),
     );
@@ -141,7 +148,11 @@ describe("InstallAppUseCase", () => {
     const result = await useCase.execute(INPUT);
 
     // then
-    expect(result.isErr()).toBe(true);
-    expect(result._unsafeUnwrapErr().code).toBe("INSTALL_APP_JWKS_PREFETCH_ERROR");
+    const error = result._unsafeUnwrapErr();
+    expect(error.code).toBe("INSTALL_APP_JWKS_PREFETCH_ERROR");
+    expect(error.cause).toEqual({
+      code: "JWKS_FETCH_ERROR",
+      message: "fetch failed",
+    });
   });
 });

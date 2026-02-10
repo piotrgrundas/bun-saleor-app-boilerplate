@@ -1,11 +1,10 @@
-import type { Result } from "neverthrow";
-
-import type { Error as DomainError, JwksErrorCode } from "../objects/error";
+import type { JwksErrorCode } from "../objects/error";
+import type { AsyncDomainResult } from "../objects/result";
 
 export interface JWKSService {
   verify(
     payload: string,
     signature: string,
     saleorDomain: string,
-  ): Promise<Result<string, DomainError<JwksErrorCode>>>;
+  ): AsyncDomainResult<string, JwksErrorCode>;
 }

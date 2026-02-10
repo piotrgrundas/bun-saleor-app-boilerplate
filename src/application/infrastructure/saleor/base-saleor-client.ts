@@ -1,32 +1,21 @@
-import type { Result } from "neverthrow";
 import { err, ok } from "neverthrow";
 
-import type {
-  Error as DomainError,
-  SaleorClientErrorCode,
-} from "@/application/domain/objects/error";
-import type {
-  SaleorClient,
-  SaleorClientFactory,
-} from "@/application/domain/services/saleor-client-service";
+import type { SaleorClientErrorCode } from "@/application/domain/objects/error";
+import type { AsyncDomainResult } from "@/application/domain/objects/result";
+import type { SaleorClient } from "@/application/domain/services/saleor-client-service";
 import { getErrorMessage } from "@/lib/error/helpers";
 import type { GraphQLResponse } from "@/lib/graphql/types";
 import { AppIdDocument, type AppIdQuery } from "./graphql/saleor/AppIdQuery.generated";
 
-class BaseSaleorClient implements SaleorClient {
-  constructor(
-    private __apiUrl: string,
-    private __token: string,
-  ) {}
-
-  async getAppId(): Promise<Result<string, DomainError<SaleorClientErrorCode>>> {
+export class BaseSaleorClient implements SaleorClient {
+  async getAppId(apiUrl: string, token: string): AsyncDomainResult<string, SaleorClientErrorCode> {
     let response: Response;
     try {
-      response = await fetch(this.__apiUrl, {
+      response = await fetch(apiUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${this.__token}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ query: AppIdDocument.toString() }),
       });
@@ -63,11 +52,5 @@ class BaseSaleorClient implements SaleorClient {
     }
 
     return ok(appId);
-  }
-}
-
-export class BaseSaleorClientFactory implements SaleorClientFactory {
-  create(apiUrl: string, token: string): SaleorClient {
-    return new BaseSaleorClient(apiUrl, token);
   }
 }

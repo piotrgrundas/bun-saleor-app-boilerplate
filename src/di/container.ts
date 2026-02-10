@@ -24,13 +24,13 @@ export const container = createContainer()
     appConfigRepository: () => createAppConfig(),
   })
   .add({
-    saleorClientFactory: () => createSaleorClient(),
+    saleorClient: () => createSaleorClient(),
   })
   .add((ctx) => ({
     installApp: () =>
       new InstallAppUseCase(
         ctx.appConfigRepository,
-        ctx.saleorClientFactory,
+        ctx.saleorClient,
         ctx.jwksRepository,
         ctx.logger,
       ),

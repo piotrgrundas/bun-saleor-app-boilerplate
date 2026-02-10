@@ -1,11 +1,6 @@
-import type { Result } from "neverthrow";
-
-import type { Error as DomainError, SaleorClientErrorCode } from "../objects/error";
+import type { SaleorClientErrorCode } from "../objects/error";
+import type { AsyncDomainResult } from "../objects/result";
 
 export interface SaleorClient {
-  getAppId(): Promise<Result<string, DomainError<SaleorClientErrorCode>>>;
-}
-
-export interface SaleorClientFactory {
-  create(apiUrl: string, token: string): SaleorClient;
+  getAppId(apiUrl: string, token: string): AsyncDomainResult<string, SaleorClientErrorCode>;
 }

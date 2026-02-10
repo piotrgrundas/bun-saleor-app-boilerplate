@@ -1,10 +1,9 @@
-import type { Result } from "neverthrow";
-
-import type { Error as DomainError, JwksErrorCode } from "../objects/error";
+import type { JwksErrorCode } from "../objects/error";
+import type { AsyncDomainResult } from "../objects/result";
 
 export interface JWKSRepository {
   getKeys(
     saleorDomain: string,
     forceRefresh?: boolean,
-  ): Promise<Result<JsonWebKey[], DomainError<JwksErrorCode>>>;
+  ): AsyncDomainResult<JsonWebKey[], JwksErrorCode>;
 }

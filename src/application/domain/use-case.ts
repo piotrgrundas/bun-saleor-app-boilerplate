@@ -1,7 +1,6 @@
-import type { Result } from "neverthrow";
+import type { DomainErrorCode } from "./objects/error";
+import type { AsyncDomainResult } from "./objects/result";
 
-import type { Error as DomainError, ErrorCode } from "./objects/error";
-
-export interface UseCase<TInput, TOutput, TErrorCode extends ErrorCode = ErrorCode> {
-  execute(input: TInput): Promise<Result<TOutput, DomainError<TErrorCode>>>;
+export interface UseCase<TInput, TOutput, TErrorCode extends DomainErrorCode = DomainErrorCode> {
+  execute(input: TInput): AsyncDomainResult<TOutput, TErrorCode>;
 }

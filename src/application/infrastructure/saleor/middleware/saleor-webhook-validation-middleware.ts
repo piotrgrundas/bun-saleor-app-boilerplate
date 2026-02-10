@@ -10,22 +10,22 @@ import { saleorWebhookHeadersSchema } from "@/application/infrastructure/saleor/
  * 2. Verifies the JWS signature against the Saleor instance's JWKS
  */
 export function createSaleorWebhookValidationMiddleware(jwksService: JWKSService) {
-  return createMiddleware(async (c, next) => {
+  return createMiddleware(async (context, next) => {
     const headers = {
-      "saleor-domain": c.req.header("saleor-domain"),
-      "saleor-api-url": c.req.header("saleor-api-url"),
-      "saleor-event": c.req.header("saleor-event"),
-      "saleor-signature": c.req.header("saleor-signature"),
+      "saleor-domain": context.req.header("saleor-domain"),
+      "saleor-api-url": context.req.header("saleor-api-url"),
+      "saleor-event": context.req.header("saleor-event"),
+      "saleor-signature": context.req.header("saleor-signature"),
     };
 
     const parsed = saleorWebhookHeadersSchema.safeParse(headers);
     if (!parsed.success) {
-      throw new BadRequestError("Invalid Saleor webhook headers", parsed.error.flatten());
+      throw new BadRequestError("Invalid Saleor webhook headers", parsed.error.issues);
     }
 
     const { "saleor-domain": domain, "saleor-signature": signature } = parsed.data;
 
-    const body = await c.req.text();
+    const body = await context.req.text();
 
     const result = await jwksService.verify(body, signature, domain);
 
@@ -33,9 +33,9 @@ export function createSaleorWebhookValidationMiddleware(jwksService: JWKSService
       throw new UnauthorizedError("Invalid webhook signature");
     }
 
-    c.set("saleorDomain", domain);
-    c.set("saleorApiUrl", parsed.data["saleor-api-url"]);
-    c.set("saleorEvent", parsed.data["saleor-event"]);
+    context.set("saleorDomain", domain);
+    context.set("saleorApiUrl", parsed.data["saleor-api-url"]);
+    context.set("saleorEvent", parsed.data["saleor-event"]);
 
     await next();
   });

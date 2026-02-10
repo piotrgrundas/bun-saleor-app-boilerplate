@@ -1,8 +1,8 @@
 import { flattenedVerify, importJWK } from "jose";
-import type { Result } from "neverthrow";
 import { err, ok } from "neverthrow";
 
-import type { Error as DomainError, JwksErrorCode } from "@/application/domain/objects/error";
+import type { JwksErrorCode } from "@/application/domain/objects/error";
+import type { AsyncDomainResult } from "@/application/domain/objects/result";
 import type { JWKSRepository } from "@/application/domain/repositories/jwks-repository";
 import type { JWKSService } from "@/application/domain/services/jwks-service";
 
@@ -14,7 +14,7 @@ export class JoseJWKSService implements JWKSService {
     signature: string,
     saleorDomain: string,
     forceRefresh: boolean,
-  ): Promise<Result<string, DomainError<JwksErrorCode>>> {
+  ): AsyncDomainResult<string, JwksErrorCode> {
     const keysResult = await this.__jwksRepository.getKeys(saleorDomain, forceRefresh);
     if (keysResult.isErr()) return err(keysResult.error);
 
@@ -48,7 +48,7 @@ export class JoseJWKSService implements JWKSService {
     payload: string,
     signature: string,
     saleorDomain: string,
-  ): Promise<Result<string, DomainError<JwksErrorCode>>> {
+  ): AsyncDomainResult<string, JwksErrorCode> {
     const result = await this.__tryVerify(payload, signature, saleorDomain, false);
 
     if (result.isOk()) {
