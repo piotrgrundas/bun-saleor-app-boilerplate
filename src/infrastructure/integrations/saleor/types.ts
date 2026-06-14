@@ -1,9 +1,11 @@
+import { PermissionEnum } from "./graphql/schema";
+
 export interface SaleorAppManifest {
   id: string;
   version: string;
   name: string;
   about?: string;
-  permissions: string[];
+  permissions: PermissionEnum[];
   appUrl: string;
   configurationUrl?: string;
   tokenTargetUrl: string;
